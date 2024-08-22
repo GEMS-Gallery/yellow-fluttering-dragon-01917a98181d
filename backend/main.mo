@@ -28,10 +28,11 @@ actor {
 
   // Stable variables
   stable var categoriesArray: [Category] = [];
+  stable var listingsArray: [Listing] = [];
   stable var nextListingId: Nat = 0;
 
   // In-memory state
-  let listings = HashMap.HashMap<Text, Listing>(0, Text.equal, Text.hash);
+  var listings = HashMap.HashMap<Text, Listing>(0, Text.equal, Text.hash);
 
   // Helper functions
   func generateId() : Text {
@@ -55,16 +56,17 @@ actor {
       price;
     };
     listings.put(id, newListing);
+    listingsArray := Array.append(listingsArray, [newListing]);
     #ok(id)
   };
 
   public query func getListings(categoryId: Text) : async [Listing] {
-    Iter.toArray(Iter.filter(listings.vals(), func (l: Listing) : Bool { l.categoryId == categoryId }))
+    Array.filter(listingsArray, func (l: Listing) : Bool { l.categoryId == categoryId })
   };
 
   // Initialize categories
   system func preupgrade() {
-    // No need to do anything as we're using stable variables
+    listingsArray := Iter.toArray(listings.vals());
   };
 
   system func postupgrade() {
@@ -76,5 +78,16 @@ actor {
         { id = "books"; name = "Books"; icon = "book" },
       ];
     };
+    listings := HashMap.fromIter<Text, Listing>(
+      Iter.map<Listing, (Text, Listing)>(
+        listingsArray.vals(),
+        func (listing : Listing) : (Text, Listing) {
+          (listing.id, listing)
+        }
+      ),
+      listingsArray.size(),
+      Text.equal,
+      Text.hash
+    );
   };
 }
