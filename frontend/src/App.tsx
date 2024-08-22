@@ -3,6 +3,7 @@ import { Routes, Route, Link, useParams } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Container, Grid, Card, CardContent, CardMedia, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Snackbar } from '@mui/material';
 import { styled } from '@mui/system';
 import { backend } from 'declarations/backend';
+import { Principal } from '@dfinity/principal';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   height: '100%',
@@ -100,11 +101,15 @@ const CategoryPage: React.FC = () => {
   const handleCreateListing = async () => {
     if (id) {
       try {
+        const priceValue = newListing.price && newListing.price.trim() !== '' 
+          ? Principal.fromText(newListing.price).toText() 
+          : null;
+
         const result = await backend.createListing(
           id,
           newListing.title,
           newListing.description,
-          newListing.price && newListing.price.trim() !== '' ? newListing.price : null
+          priceValue
         );
         if ('ok' in result) {
           setIsDialogOpen(false);
