@@ -18,7 +18,7 @@ type Category =
    name: text;
  };
 service : {
-  createListing: (text, text, text, opt float64) -> (Result);
+  createListing: (text, text, text, opt text) -> (Result);
   getCategories: () -> (vec Category) query;
   getListings: (text) -> (vec Listing) query;
 }

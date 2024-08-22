@@ -14,7 +14,7 @@ export type Result = { 'ok' : string } |
   { 'err' : string };
 export interface _SERVICE {
   'createListing' : ActorMethod<
-    [string, string, string, [] | [number]],
+    [string, string, string, [] | [string]],
     Result
   >,
   'getCategories' : ActorMethod<[], Array<Category>>,

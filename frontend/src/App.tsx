@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useParams } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Container, Grid, Card, CardContent, CardMedia, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { AppBar, Toolbar, Typography, Container, Grid, Card, CardContent, CardMedia, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Snackbar } from '@mui/material';
 import { styled } from '@mui/system';
 import { backend } from 'declarations/backend';
 
@@ -78,6 +78,8 @@ const CategoryPage: React.FC = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newListing, setNewListing] = useState({ title: '', description: '', price: '' });
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -87,6 +89,8 @@ const CategoryPage: React.FC = () => {
           setListings(result);
         } catch (error) {
           console.error('Error fetching listings:', error);
+          setSnackbarMessage('Error fetching listings. Please try again.');
+          setSnackbarOpen(true);
         }
       }
     };
@@ -96,18 +100,24 @@ const CategoryPage: React.FC = () => {
   const handleCreateListing = async () => {
     if (id) {
       try {
-        const result = await backend.createListing(id, newListing.title, newListing.description, newListing.price ? parseFloat(newListing.price) : null);
+        const result = await backend.createListing(id, newListing.title, newListing.description, newListing.price ? newListing.price : null);
         if ('ok' in result) {
           setIsDialogOpen(false);
           setNewListing({ title: '', description: '', price: '' });
           // Refresh listings
           const updatedListings = await backend.getListings(id);
           setListings(updatedListings);
+          setSnackbarMessage('Listing created successfully!');
+          setSnackbarOpen(true);
         } else {
           console.error('Error creating listing:', result.err);
+          setSnackbarMessage(`Error creating listing: ${result.err}`);
+          setSnackbarOpen(true);
         }
       } catch (error) {
         console.error('Error creating listing:', error);
+        setSnackbarMessage('Error creating listing. Please try again.');
+        setSnackbarOpen(true);
       }
     }
   };
@@ -177,6 +187,12 @@ const CategoryPage: React.FC = () => {
           <Button onClick={handleCreateListing}>Create</Button>
         </DialogActions>
       </Dialog>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+      />
     </Container>
   );
 };

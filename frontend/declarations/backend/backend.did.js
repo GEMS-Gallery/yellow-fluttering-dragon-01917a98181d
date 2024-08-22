@@ -14,7 +14,7 @@ export const idlFactory = ({ IDL }) => {
   });
   return IDL.Service({
     'createListing' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(IDL.Float64)],
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],
         [Result],
         [],
       ),
