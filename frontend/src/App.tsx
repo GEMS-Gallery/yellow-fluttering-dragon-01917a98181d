@@ -100,7 +100,12 @@ const CategoryPage: React.FC = () => {
   const handleCreateListing = async () => {
     if (id) {
       try {
-        const result = await backend.createListing(id, newListing.title, newListing.description, newListing.price ? newListing.price : null);
+        const result = await backend.createListing(
+          id,
+          newListing.title,
+          newListing.description,
+          newListing.price && newListing.price.trim() !== '' ? newListing.price : null
+        );
         if ('ok' in result) {
           setIsDialogOpen(false);
           setNewListing({ title: '', description: '', price: '' });
@@ -120,6 +125,12 @@ const CategoryPage: React.FC = () => {
         setSnackbarOpen(true);
       }
     }
+  };
+
+  const validatePrice = (price: string): boolean => {
+    if (price.trim() === '') return true;
+    const numPrice = parseFloat(price);
+    return !isNaN(numPrice) && numPrice >= 0;
   };
 
   return (
@@ -179,12 +190,19 @@ const CategoryPage: React.FC = () => {
             fullWidth
             type="number"
             value={newListing.price}
-            onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
+            onChange={(e) => {
+              const newPrice = e.target.value;
+              if (validatePrice(newPrice)) {
+                setNewListing({ ...newListing, price: newPrice });
+              }
+            }}
+            error={!validatePrice(newListing.price)}
+            helperText={!validatePrice(newListing.price) ? 'Please enter a valid price' : ''}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateListing}>Create</Button>
+          <Button onClick={handleCreateListing} disabled={!validatePrice(newListing.price)}>Create</Button>
         </DialogActions>
       </Dialog>
       <Snackbar
