@@ -1,0 +1,24 @@
+type Result = 
+ variant {
+   err: text;
+   ok: text;
+ };
+type Listing = 
+ record {
+   categoryId: text;
+   description: text;
+   id: text;
+   price: opt float64;
+   title: text;
+ };
+type Category = 
+ record {
+   icon: text;
+   id: text;
+   name: text;
+ };
+service : {
+  createListing: (text, text, text, opt float64) -> (Result);
+  getCategories: () -> (vec Category) query;
+  getListings: (text) -> (vec Listing) query;
+}
