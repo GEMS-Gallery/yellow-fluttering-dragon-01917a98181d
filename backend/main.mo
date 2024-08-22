@@ -1,129 +1,98 @@
 import Bool "mo:base/Bool";
 import Hash "mo:base/Hash";
-import Int "mo:base/Int";
-import List "mo:base/List";
 
 import Text "mo:base/Text";
 import Array "mo:base/Array";
-import Float "mo:base/Float";
 import HashMap "mo:base/HashMap";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Result "mo:base/Result";
-import Char "mo:base/Char";
-import Nat32 "mo:base/Nat32";
+import Principal "mo:base/Principal";
+import Time "mo:base/Time";
 
 actor {
-  // Types
   type Category = {
     id: Text;
     name: Text;
     icon: Text;
   };
 
-  type Listing = {
+  type Topic = {
     id: Text;
     categoryId: Text;
     title: Text;
-    description: Text;
-    price: ?Float;
+    content: Text;
+    authorPrincipal: Principal;
+    createdAt: Time.Time;
   };
 
-  // Stable variables
+  type Reply = {
+    id: Text;
+    topicId: Text;
+    content: Text;
+    authorPrincipal: Principal;
+    createdAt: Time.Time;
+  };
+
   stable var categoriesArray: [Category] = [];
-  stable var listingsArray: [Listing] = [];
-  stable var nextListingId: Nat = 0;
+  stable var topicsArray: [Topic] = [];
+  stable var repliesArray: [Reply] = [];
+  stable var nextTopicId: Nat = 0;
+  stable var nextReplyId: Nat = 0;
 
-  // In-memory state
-  var listings = HashMap.HashMap<Text, Listing>(0, Text.equal, Text.hash);
+  var topics = HashMap.HashMap<Text, Topic>(0, Text.equal, Text.hash);
+  var replies = HashMap.HashMap<Text, Reply>(0, Text.equal, Text.hash);
 
-  // Helper functions
-  func generateId() : Text {
-    let id = Nat.toText(nextListingId);
-    nextListingId += 1;
-    id
+  func generateId(prefix: Text, counter: Nat) : Text {
+    prefix # Nat.toText(counter)
   };
 
-  func textToFloat(t : Text) : ?Float {
-    let digits = "0123456789";
-    let decimals = ".";
-
-    func isDigit(c : Char) : Bool {
-      Text.contains(digits, #char c)
+  public shared(msg) func createTopic(categoryId: Text, title: Text, content: Text) : async Result.Result<Text, Text> {
+    let topicId = generateId("topic_", nextTopicId);
+    nextTopicId += 1;
+    let newTopic: Topic = {
+      id = topicId;
+      categoryId = categoryId;
+      title = title;
+      content = content;
+      authorPrincipal = msg.caller;
+      createdAt = Time.now();
     };
-
-    var int : Float = 0;
-    var frac : Float = 0;
-    var div : Float = 1;
-    var isNegative = false;
-    var seenDecimal = false;
-
-    for (c in t.chars()) {
-      if (c == '-' and int == 0 and frac == 0) {
-        isNegative := true;
-      } else if (isDigit(c)) {
-        let d = Float.fromInt(Nat32.toNat(Char.toNat32(c) - 48));
-        if (seenDecimal) {
-          frac += d / div;
-          div *= 10;
-        } else {
-          int := int * 10 + d;
-        };
-      } else if (c == '.' and not seenDecimal) {
-        seenDecimal := true;
-      } else {
-        return null;
-      };
-    };
-
-    let result = int + frac;
-    ?( if (isNegative) -result else result )
+    topics.put(topicId, newTopic);
+    topicsArray := Array.append(topicsArray, [newTopic]);
+    #ok(topicId)
   };
 
-  func parsePrice(price: ?Text) : Result.Result<Float, Text> {
-    switch (price) {
-      case (null) { #ok(0) };
-      case (?p) {
-        switch (textToFloat(p)) {
-          case (null) { #err("Invalid price format") };
-          case (?float) { #ok(float) };
-        };
-      };
+  public shared(msg) func createReply(topicId: Text, content: Text) : async Result.Result<Text, Text> {
+    let replyId = generateId("reply_", nextReplyId);
+    nextReplyId += 1;
+    let newReply: Reply = {
+      id = replyId;
+      topicId = topicId;
+      content = content;
+      authorPrincipal = msg.caller;
+      createdAt = Time.now();
     };
+    replies.put(replyId, newReply);
+    repliesArray := Array.append(repliesArray, [newReply]);
+    #ok(replyId)
   };
 
-  // Public functions
   public query func getCategories() : async [Category] {
     categoriesArray
   };
 
-  public func createListing(categoryId: Text, title: Text, description: Text, price: ?Text) : async Result.Result<Text, Text> {
-    let parsedPrice = parsePrice(price);
-    switch (parsedPrice) {
-      case (#err(e)) { return #err(e) };
-      case (#ok(p)) {
-        let id = generateId();
-        let newListing: Listing = {
-          id;
-          categoryId;
-          title;
-          description;
-          price = ?p;
-        };
-        listings.put(id, newListing);
-        listingsArray := Array.append(listingsArray, [newListing]);
-        #ok(id)
-      };
-    };
+  public query func getTopics(categoryId: Text) : async [Topic] {
+    Array.filter(topicsArray, func (t: Topic) : Bool { t.categoryId == categoryId })
   };
 
-  public query func getListings(categoryId: Text) : async [Listing] {
-    Array.filter(listingsArray, func (l: Listing) : Bool { l.categoryId == categoryId })
+  public query func getReplies(topicId: Text) : async [Reply] {
+    Array.filter(repliesArray, func (r: Reply) : Bool { r.topicId == topicId })
   };
 
-  // Initialize categories
   system func preupgrade() {
-    listingsArray := Iter.toArray(listings.vals());
+    topicsArray := Iter.toArray(topics.vals());
+    repliesArray := Iter.toArray(replies.vals());
   };
 
   system func postupgrade() {
@@ -135,14 +104,25 @@ actor {
         { id = "books"; name = "Books"; icon = "book" },
       ];
     };
-    listings := HashMap.fromIter<Text, Listing>(
-      Iter.map<Listing, (Text, Listing)>(
-        listingsArray.vals(),
-        func (listing : Listing) : (Text, Listing) {
-          (listing.id, listing)
+    topics := HashMap.fromIter<Text, Topic>(
+      Iter.map<Topic, (Text, Topic)>(
+        topicsArray.vals(),
+        func (topic : Topic) : (Text, Topic) {
+          (topic.id, topic)
         }
       ),
-      listingsArray.size(),
+      topicsArray.size(),
+      Text.equal,
+      Text.hash
+    );
+    replies := HashMap.fromIter<Text, Reply>(
+      Iter.map<Reply, (Text, Reply)>(
+        repliesArray.vals(),
+        func (reply : Reply) : (Text, Reply) {
+          (reply.id, reply)
+        }
+      ),
+      repliesArray.size(),
       Text.equal,
       Text.hash
     );

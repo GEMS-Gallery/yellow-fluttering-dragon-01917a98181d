@@ -5,21 +5,28 @@ export const idlFactory = ({ IDL }) => {
     'icon' : IDL.Text,
     'name' : IDL.Text,
   });
-  const Listing = IDL.Record({
+  const Time = IDL.Int;
+  const Reply = IDL.Record({
+    'id' : IDL.Text,
+    'content' : IDL.Text,
+    'createdAt' : Time,
+    'authorPrincipal' : IDL.Principal,
+    'topicId' : IDL.Text,
+  });
+  const Topic = IDL.Record({
     'id' : IDL.Text,
     'categoryId' : IDL.Text,
     'title' : IDL.Text,
-    'description' : IDL.Text,
-    'price' : IDL.Opt(IDL.Float64),
+    'content' : IDL.Text,
+    'createdAt' : Time,
+    'authorPrincipal' : IDL.Principal,
   });
   return IDL.Service({
-    'createListing' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],
-        [Result],
-        [],
-      ),
+    'createReply' : IDL.Func([IDL.Text, IDL.Text], [Result], []),
+    'createTopic' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [Result], []),
     'getCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
-    'getListings' : IDL.Func([IDL.Text], [IDL.Vec(Listing)], ['query']),
+    'getReplies' : IDL.Func([IDL.Text], [IDL.Vec(Reply)], ['query']),
+    'getTopics' : IDL.Func([IDL.Text], [IDL.Vec(Topic)], ['query']),
   });
 };
 export const init = ({ IDL }) => { return []; };

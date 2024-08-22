@@ -1,15 +1,25 @@
+type Topic = 
+ record {
+   authorPrincipal: principal;
+   categoryId: text;
+   content: text;
+   createdAt: Time;
+   id: text;
+   title: text;
+ };
+type Time = int;
 type Result = 
  variant {
    err: text;
    ok: text;
  };
-type Listing = 
+type Reply = 
  record {
-   categoryId: text;
-   description: text;
+   authorPrincipal: principal;
+   content: text;
+   createdAt: Time;
    id: text;
-   price: opt float64;
-   title: text;
+   topicId: text;
  };
 type Category = 
  record {
@@ -18,7 +28,9 @@ type Category =
    name: text;
  };
 service : {
-  createListing: (text, text, text, opt text) -> (Result);
+  createReply: (text, text) -> (Result);
+  createTopic: (text, text, text) -> (Result);
   getCategories: () -> (vec Category) query;
-  getListings: (text) -> (vec Listing) query;
+  getReplies: (text) -> (vec Reply) query;
+  getTopics: (text) -> (vec Topic) query;
 }
